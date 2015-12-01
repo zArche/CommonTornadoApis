@@ -1,8 +1,8 @@
 #encoding:utf-8
 
-import tornado.web
+import BaseHandler
 
-class HelloHandler(tornado.web.RequestHandler):
+class HelloHandler(BaseHandler.BaseHandler):
     def get(self):
         name = self.get_argument("name","world")
         self.write("[get]hello "+ name)

@@ -1,12 +1,11 @@
 #encoding:utf-8
 
-import tornado.web
 import time
-
+import BaseHandler
 
 TIMEFORMAT = '%Y-%m-%d %X'
 
-class GetTimeHandler(tornado.web.RequestHandler):
+class GetTimeHandler(BaseHandler.BaseHandler):
     def get(self):
         self.write(time.strftime(TIMEFORMAT,time.localtime()))
         
