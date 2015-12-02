@@ -11,15 +11,18 @@ sys.path.append("..")
 
 from models.Models import User,Token
 import common.dao as dao
+from sqlalchemy.orm.exc import NoResultFound
+
 
 from common.config import DEBUG
 from utils.utils import Utils
+from utils.dateutils import DateUtil
 
 ########################################################################
 class LoginHandler(BaseHandler.BaseHandler):
     """
     登陆接口示例
-    TODO:token生成、功能提取，结构优化
+    TODO:结构优化
     """     
     def get(self):
         user_id = self.get_argument("user_id","")
@@ -27,38 +30,52 @@ class LoginHandler(BaseHandler.BaseHandler):
         
         self.session = dao.DBSession()
         try:
-            user = self.session.query(User).filter(User.user_id==user_id,User.user_passwd==user_pwd).one() 
+            query = self.session.query(User).filter(User.user_id==user_id,User.user_passwd==user_pwd).one() 
             #不要用下面的字符串拼接的方式查询，会造成sql注入。不信你可以试试。
-            #user = self.session.query(User).filter('user_id=%s and user_passwd=%s'%(user_id,user_pwd)).one()
-            if user:
-                #生成token 算法 base64(md5(userid+userpwd) + salt)
-                token = Utils.md5(user_id+user_pwd)+Utils.md5("arche")
-                token = Utils.base64(token)
-                new_token = self.session.query(Token).filter(Token.token==token).one()
+            #query = self.session.query(User).filter('user_id=%s and user_passwd=%s'%(user_id,user_pwd)).one()
                 
-                if not new_token:
-                    new_token = Token(token=token,user_id=user_id,starttime=100,endtime=200)
-                    self.session.add(new_token)
-                else: #存在token
-                    #更新时间
-                    new_token = Token(token=token,user_id=user_id,starttime=200,endtime=300)
-                    self.session.merge(new_token)
-                self.session.commit() #注意别忘了commit
+            #生成token 算法 base64(md5(userid+userpwd) + md5(timestampofnow))
+            token = Utils.md5(user_id+user_pwd)+Utils.md5(str(DateUtil.get_now_timestamp()))
+            token = Utils.base64(token)
                 
-                dic = dict({"code":0,
-                            "user_id":user_id,
-                            "user_pwd":user_pwd,
-                            "token":token})
-            else:
-                dic = dict({"code":1,
-                            "reason":"username or passwd error"})      
-            ret = Utils.dict2json(dic)
-            self.write(ret)
+            #更新token时间
+            starttime = DateUtil.get_token_starttime()
+            endtime = DateUtil.get_token_endtime()                
+                
+            new_token = Token(token=token,user_id=user_id,starttime=starttime,endtime=endtime)
+                
+            try:
+                
+                query = self.session.query(Token).filter(Token.user_id==user_id)
+                
+                #查询数据库中已有token值
+                old_token = query.one()
+                
+                #存在token 更新   不存在则会抛异常
+                query.update({Token.token:token,
+                              Token.starttime:starttime,
+                              Token.endtime:endtime})                
+                    
+            except Exception,e:
+                print type(e)
+                if type(e) is  NoResultFound:
+                    self.session.add(new_token)                    
+                        
+            self.session.commit() #注意别忘了commit
+                
+            dic = dict({"code":0,
+                    "user_id":user_id,
+                    "user_pwd":user_pwd,
+                    "token":token})
+  
+
         except Exception,e:
-            print e
-            dic = dict({"code":1,
+            if type(e) is NoResultFound:
+                dic = dict({"code":1,
                         "reason":"username or passwd error"})     
+
+        finally:
             ret = Utils.dict2json(dic)
-            self.write(ret)
+            self.write(ret)            
             
         
