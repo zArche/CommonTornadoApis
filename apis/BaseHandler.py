@@ -22,7 +22,7 @@ class BaseHandler(tornado.web.RequestHandler):
     def on_finish(self):
         self.session.close()
         self.token = ""
-        dic = None
+        self.dic = None
      
     #@property
     #def session(self):
