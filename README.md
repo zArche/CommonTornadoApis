@@ -1,6 +1,6 @@
 # CommonTornadoApis
-封装一个模板，编写python tornado接口时，可以快速上手  
-说明：  
+使用python tornado框架编写后台api  
+封装一个通用型模板，编写python tornado接口时，可以快速进行项目逻辑开发  
 * 1.内容:  
     * 目前主要实现了User、Token实体类,token机制,以及用户注册、登录、详情等示例接口  
 * 2.项目结构：  
